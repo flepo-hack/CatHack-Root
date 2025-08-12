@@ -9,6 +9,9 @@ pkg install && upgrade -y
 pkg install git
 pkg install curl -y
 pkg install net-tools
+
+_____________________________________________________
+
 git clone https://github.com/flepo-hack/CatHack-Root.git
 
 _____________________________________________________
