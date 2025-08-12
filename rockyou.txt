@@ -1,1 +1,2 @@
-git clone https://raw.githubusercontent.com/mishrasunny174/WordLists/refs/heads/master/Top304Thousandpasswords.txt
+pkg install curl
+curl -0 https://raw.githubusercontent.com/mishrasunny174/WordLists/refs/heads/master/Top304Thousandpasswords.txt
