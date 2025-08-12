@@ -7,7 +7,7 @@ NC='\033[0m'
 cat_banner() {
     echo -e "${CYAN}"
     echo " /\_/\  "
-    echo "( o.o )  CatHack Prompt"
+    echo "( o.o )  Root Cat Prompt"
     echo " > ^ <   by Flepo"
     echo -e "${NC}"
 }
@@ -59,8 +59,25 @@ while true; do
                 echo "✅ Password for $ssid_choice: $found_pass"
             else
                 echo "❌ Not found in phone, trying aircrack-ng..."
+
+                # Tarkistetaan onko aircrack-ng asennettu, asennetaan jos ei ole
+                if ! command -v aircrack-ng >/dev/null 2>&1; then
+                    echo "📥 aircrack-ng not found, installing..."
+                    pkg update && pkg install aircrack-ng -y
+                fi
+
                 read -p "📂 Enter path to .cap handshake file: " cap_file
+                if [ ! -f "$cap_file" ]; then
+                    echo "❌ File not found: $cap_file"
+                    continue
+                fi
+
                 read -p "📂 Enter path to wordlist: " wordlist
+                if [ ! -f "$wordlist" ]; then
+                    echo "❌ File not found: $wordlist"
+                    continue
+                fi
+
                 aircrack-ng -w "$wordlist" -e "$ssid_choice" "$cap_file"
             fi
             ;;
