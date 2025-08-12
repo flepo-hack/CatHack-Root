@@ -10,6 +10,9 @@ pkg install git
 pkg install curl -y
 pkg install net-tools
 git clone https://github.com/flepo-hack/CatHack-Root.git
+
+_____________________________________________________
+
 chmod +x rootcat.sh
 su
 ls
