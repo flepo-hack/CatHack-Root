@@ -7,7 +7,7 @@ NC='\033[0m'
 cat_banner() {
     echo -e "${CYAN}"
     echo " /\_/\  "
-    echo "( o.o )  Root Cat Prompt"
+    echo "( o.o )  CatHack Prompt"
     echo " > ^ <   by Flepo"
     echo -e "${NC}"
 }
