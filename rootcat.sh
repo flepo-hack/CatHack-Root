@@ -124,5 +124,23 @@ while true; do
             read -p "🌐 Enter IP address: " ipaddr
             if [[ "$ipaddr" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
                 echo "🔎 Getting info for $ipaddr..."
-                if comm
-                
+                if command -v jq >/dev/null 2>&1; then
+                    curl -s "http://ip-api.com/json/$ipaddr" | jq
+                else
+                    curl -s "http://ip-api.com/json/$ipaddr"
+                fi
+            else
+                echo "❌ Invalid IP format."
+            fi
+            ;;
+        3)
+            echo "🐾 Bye😼!"
+            exit 0
+            ;;
+        *)
+            echo "❌ Unknown choice"
+            ;;
+    esac
+    echo ""
+    read -p "Press enter to return to menu..."
+done
