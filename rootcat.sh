@@ -31,12 +31,12 @@ while true; do
             echo ""
             echo "📡 Scanning wifis..."
             echo ""
-            iw dev wlan0 scan 2>/dev/null | grep SSID | sed 's/SSID: //g' | sort -u
+            iw dev wlan0 scan 2>/dev/null | grep 'SSID:' | sed 's/SSID: //' | sort -u
 
             echo ""
             read -p "🔑 Enter SSID to get password: " ssid_choice
 
-            echo "🔍 Searching password from phone..."
+            echo "🔍 Searching passwords..."
             found_pass=""
             FILES=(
                 "/data/misc/wifi/WifiConfigStore.xml"
@@ -47,6 +47,7 @@ while true; do
 
             for FILE in "${FILES[@]}"; do
                 if [ -f "$FILE" ]; then
+                    echo "📂 Found file: $FILE"
                     pass=$(awk -v ssid="\"$ssid_choice\"" '
                         BEGIN {found=0}
                         $0 ~ "<string name=\"SSID\">"ssid"<\/string>" {found=1; next}
@@ -70,7 +71,6 @@ while true; do
             else
                 echo "❌ Not found in phone, trying aircrack-ng..."
 
-                # Tarkistetaan onko aircrack-ng asennettu, asennetaan jos ei ole
                 if ! command -v aircrack-ng >/dev/null 2>&1; then
                     echo "📥 aircrack-ng not found, installing..."
                     pkg update && pkg install aircrack-ng -y
