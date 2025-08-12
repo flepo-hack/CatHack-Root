@@ -7,7 +7,7 @@ NC='\033[0m'
 cat_banner() {
     echo -e "${CYAN}"
     echo " /\_/\  "
-    echo "( o.o )  Root Cat Prompt"
+    echo "( o.o )  CatHack Prompt"
     echo " > ^ <   by Flepo"
     echo -e "${NC}"
 }
@@ -29,14 +29,17 @@ while true; do
     case "$choice" in
         1)
             echo ""
-            echo "📡 Scanning wifis..."
+            echo "📡 Scanning WiFis..."
             echo ""
+
+            # Näytetään SSID:t listana selkeästi
             iw dev wlan0 scan 2>/dev/null | grep 'SSID:' | sed 's/SSID: //' | sort -u
 
             echo ""
             read -p "🔑 Enter SSID to get password: " ssid_choice
+            echo ""
+            echo "🔍 Searching password for \"$ssid_choice\"..."
 
-            echo "🔍 Searching passwords..."
             found_pass=""
             FILES=(
                 "/data/misc/wifi/WifiConfigStore.xml"
@@ -47,17 +50,31 @@ while true; do
 
             for FILE in "${FILES[@]}"; do
                 if [ -f "$FILE" ]; then
-                    echo "📂 Found file: $FILE"
-                    pass=$(awk -v ssid="\"$ssid_choice\"" '
-                        BEGIN {found=0}
-                        $0 ~ "<string name=\"SSID\">"ssid"<\/string>" {found=1; next}
-                        found && $0 ~ "<string name=\"PreSharedKey\">" {
-                            gsub(/.*<string name="PreSharedKey">|<\/string>.*/, "", $0)
-                            print $0
-                            exit
-                        }
-                        $0 ~ "<string name=\"SSID\">" && found {found=0}
-                    ' "$FILE")
+                    # Etsitään salasana XML-tiedostosta tai wpa_supplicant.conf:sta
+                    if [[ "$FILE" == *.xml ]]; then
+                        pass=$(awk -v ssid="\"$ssid_choice\"" '
+                            BEGIN {found=0}
+                            $0 ~ "<string name=\"SSID\">"ssid"<\/string>" {found=1; next}
+                            found && $0 ~ "<string name=\"PreSharedKey\">" {
+                                gsub(/.*<string name="PreSharedKey">|<\/string>.*/, "", $0)
+                                print $0
+                                exit
+                            }
+                            $0 ~ "<string name=\"SSID\">" && found {found=0}
+                        ' "$FILE")
+                    else
+                        # wpa_supplicant.conf -tyylinen tiedosto
+                        pass=$(awk -v ssid="$ssid_choice" '
+                            $0 ~ "network={" {net=1}
+                            net && $0 ~ "ssid=\""ssid"\"" {found=1}
+                            found && $0 ~ "psk=" {
+                                gsub(/psk=|"| /, "", $0)
+                                print $0
+                                exit
+                            }
+                            $0 ~ "}" && net {net=0; found=0}
+                        ' "$FILE")
+                    fi
 
                     if [ -n "$pass" ]; then
                         found_pass="$pass"
@@ -67,10 +84,11 @@ while true; do
             done
 
             if [ -n "$found_pass" ]; then
-                echo "✅ Password for $ssid_choice: $found_pass"
+                echo "✅ Password for \"$ssid_choice\": $found_pass"
             else
-                echo "❌ Not found in phone, trying aircrack-ng..."
+                echo "❌ Password not found in phone files, trying aircrack-ng..."
 
+                # Tarkista ja asenna aircrack-ng jos ei ole
                 if ! command -v aircrack-ng >/dev/null 2>&1; then
                     echo "📥 aircrack-ng not found, installing..."
                     pkg update && pkg install aircrack-ng -y
@@ -96,7 +114,12 @@ while true; do
             read -p "🌐 Enter IP address: " ipaddr
             if [[ "$ipaddr" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
                 echo "🔎 Getting info for $ipaddr..."
-                curl -s "http://ip-api.com/json/$ipaddr" | jq
+                # Tarkistetaan onko jq asennettu
+                if command -v jq >/dev/null 2>&1; then
+                    curl -s "http://ip-api.com/json/$ipaddr" | jq
+                else
+                    curl -s "http://ip-api.com/json/$ipaddr"
+                fi
             else
                 echo "❌ Invalid IP format."
             fi
