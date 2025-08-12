@@ -14,7 +14,13 @@ git clone https://github.com/flepo-hack/CatHack-Root.git
 _____________________________________________________
 
 chmod +x rootcat.sh
+
+_____________________________________________________
+
 su
+
+_____________________________________________________
+
 ls
 cd CatHack-Root 
 ./rootcat.sh
