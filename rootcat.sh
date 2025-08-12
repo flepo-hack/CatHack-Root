@@ -32,8 +32,25 @@ while true; do
             echo "📡 Scanning WiFis..."
             echo ""
 
-            # Näytetään SSID:t listana selkeästi
-            iw dev wlan0 scan 2>/dev/null | grep 'SSID:' | sed 's/SSID: //' | sort -u
+            # Selvitetään oikea wlan-interface
+            WLAN_IFACE=$(iw dev | grep Interface | awk '{print $2}' | head -n 1)
+            if [ -z "$WLAN_IFACE" ]; then
+                echo "❌ Ei löydetty wlan-laitetta."
+                read -p "Press enter to return to menu..."
+                continue
+            fi
+
+            # Toistuva skannaus kunnes löytyy verkkoja
+            while true; do
+                SSID_LIST=$(iw dev "$WLAN_IFACE" scan 2>/dev/null | grep 'SSID:' | sed 's/SSID: //' | sort -u)
+                if [ -n "$SSID_LIST" ]; then
+                    echo "$SSID_LIST"
+                    break
+                else
+                    echo "⚠️ Ei verkkoja löytynyt, yritetään uudelleen..."
+                    sleep 3
+                fi
+            done
 
             echo ""
             read -p "🔑 Enter SSID to get password: " ssid_choice
@@ -50,7 +67,6 @@ while true; do
 
             for FILE in "${FILES[@]}"; do
                 if [ -f "$FILE" ]; then
-                    # Etsitään salasana XML-tiedostosta tai wpa_supplicant.conf:sta
                     if [[ "$FILE" == *.xml ]]; then
                         pass=$(awk -v ssid="\"$ssid_choice\"" '
                             BEGIN {found=0}
@@ -63,7 +79,6 @@ while true; do
                             $0 ~ "<string name=\"SSID\">" && found {found=0}
                         ' "$FILE")
                     else
-                        # wpa_supplicant.conf -tyylinen tiedosto
                         pass=$(awk -v ssid="$ssid_choice" '
                             $0 ~ "network={" {net=1}
                             net && $0 ~ "ssid=\""ssid"\"" {found=1}
@@ -87,25 +102,20 @@ while true; do
                 echo "✅ Password for \"$ssid_choice\": $found_pass"
             else
                 echo "❌ Password not found in phone files, trying aircrack-ng..."
-
-                # Tarkista ja asenna aircrack-ng jos ei ole
                 if ! command -v aircrack-ng >/dev/null 2>&1; then
                     echo "📥 aircrack-ng not found, installing..."
                     pkg update && pkg install aircrack-ng -y
                 fi
-
                 read -p "📂 Enter path to .cap handshake file: " cap_file
                 if [ ! -f "$cap_file" ]; then
                     echo "❌ File not found: $cap_file"
                     continue
                 fi
-
                 read -p "📂 Enter path to wordlist: " wordlist
                 if [ ! -f "$wordlist" ]; then
                     echo "❌ File not found: $wordlist"
                     continue
                 fi
-
                 aircrack-ng -w "$wordlist" -e "$ssid_choice" "$cap_file"
             fi
             ;;
@@ -114,24 +124,5 @@ while true; do
             read -p "🌐 Enter IP address: " ipaddr
             if [[ "$ipaddr" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
                 echo "🔎 Getting info for $ipaddr..."
-                # Tarkistetaan onko jq asennettu
-                if command -v jq >/dev/null 2>&1; then
-                    curl -s "http://ip-api.com/json/$ipaddr" | jq
-                else
-                    curl -s "http://ip-api.com/json/$ipaddr"
-                fi
-            else
-                echo "❌ Invalid IP format."
-            fi
-            ;;
-        3)
-            echo "🐾 Bye😼!"
-            exit 0
-            ;;
-        *)
-            echo "❌ Unknown choice"
-            ;;
-    esac
-    echo ""
-    read -p "Press enter to return to menu..."
-done
+                if comm
+                
