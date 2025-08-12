@@ -47,7 +47,17 @@ while true; do
 
             for FILE in "${FILES[@]}"; do
                 if [ -f "$FILE" ]; then
-                    pass=$(grep -A 1 "$ssid_choice" "$FILE" | grep psk | sed 's/.*psk=//;s/[" ]//g')
+                    pass=$(awk -v ssid="\"$ssid_choice\"" '
+                        BEGIN {found=0}
+                        $0 ~ "<string name=\"SSID\">"ssid"<\/string>" {found=1; next}
+                        found && $0 ~ "<string name=\"PreSharedKey\">" {
+                            gsub(/.*<string name="PreSharedKey">|<\/string>.*/, "", $0)
+                            print $0
+                            exit
+                        }
+                        $0 ~ "<string name=\"SSID\">" && found {found=0}
+                    ' "$FILE")
+
                     if [ -n "$pass" ]; then
                         found_pass="$pass"
                         break
