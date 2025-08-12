@@ -2,7 +2,7 @@
 # CATHACK - Made by Flepo - v1.0
 # Root required
 
-# Splash screen
+# --- Splash Screen ---
 clear
 echo "=================================="
 echo "          CATHACK"
@@ -10,7 +10,21 @@ echo "       Made by Flepo v1.0"
 echo "=================================="
 sleep 2
 
-# Function: WiFi Finder & Cracker
+# --- Check dependencies ---
+for pkg in aircrack-ng iw curl jq; do
+    if ! command -v $pkg &> /dev/null; then
+        echo "[*] Installing missing package: $pkg"
+        pkg install -y $pkg
+    fi
+done
+
+# --- Get rockyou.txt ---
+if [ ! -f "rockyou.txt" ]; then
+    echo "[*] Downloading rockyou.txt wordlist..."
+    curl -L -o rockyou.txt https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt
+fi
+
+# --- WiFi Finder & Cracker ---
 wifi_crack() {
     clear
     echo "[*] Scanning for available WiFi networks..."
@@ -46,11 +60,17 @@ wifi_crack() {
     echo "[*] Starting handshake capture..."
     timeout 60 airodump-ng --bssid "$bssid" --channel "$channel" --write /tmp/catprompt/handshake wlan0
 
+    if [ ! -f /tmp/catprompt/handshake-01.cap ]; then
+        echo "❌ Handshake not captured."
+        sleep 2
+        return
+    fi
+
     echo "[*] Attempting password crack with rockyou.txt..."
     aircrack-ng /tmp/catprompt/handshake-01.cap -w rockyou.txt
 }
 
-# Function: IP Information
+# --- IP Information ---
 ip_info() {
     clear
     read -p "Enter IP address: " ipaddr
@@ -65,7 +85,7 @@ ip_info() {
     read -p "Press Enter to return to menu..."
 }
 
-# Main menu loop
+# --- Main Menu ---
 while true; do
     clear
     echo "=================================="
