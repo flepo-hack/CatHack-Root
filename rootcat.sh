@@ -29,94 +29,56 @@ while true; do
     case "$choice" in
         1)
             echo ""
-            echo "📡 Scanning WiFis..."
+            echo "📡 Getting saved WiFi networks..."
             echo ""
 
-            # Selvitetään oikea wlan-interface
-            WLAN_IFACE=$(iw dev | grep Interface | awk '{print $2}' | head -n 1)
-            if [ -z "$WLAN_IFACE" ]; then
-                echo "❌ Ei löydetty wlan-laitetta."
+            # Etsitään kaikki tallennetut SSID:t useista lähteistä
+            SSID_LIST=$( \
+                grep -oP '(?<=<string name="SSID">).*?(?=</string>)' /data/misc/wifi/WifiConfigStore.xml 2>/dev/null; \
+                grep -oP '(?<=<string name="SSID">).*?(?=</string>)' /data/misc/apexdata/com.android.wifi/WifiConfigStore.xml 2>/dev/null; \
+                grep -oP '(?<=ssid=").*?(?=")' /data/misc/wifi/wpa_supplicant.conf 2>/dev/null \
+            | sort -u )
+
+            if [ -z "$SSID_LIST" ]; then
+                echo "❌ Ei löydetty tallennettuja verkkoja."
                 read -p "Press enter to return to menu..."
                 continue
             fi
 
-            # Toistuva skannaus kunnes löytyy verkkoja
-            while true; do
-                SSID_LIST=$(iw dev "$WLAN_IFACE" scan 2>/dev/null | grep 'SSID:' | sed 's/SSID: //' | sort -u)
-                if [ -n "$SSID_LIST" ]; then
-                    echo "$SSID_LIST"
-                    break
-                else
-                    echo "⚠️ Ei verkkoja löytynyt, yritetään uudelleen..."
-                    sleep 3
-                fi
-            done
-
+            echo "$SSID_LIST"
             echo ""
             read -p "🔑 Enter SSID to get password: " ssid_choice
             echo ""
             echo "🔍 Searching password for \"$ssid_choice\"..."
 
-            found_pass=""
-            FILES=(
-                "/data/misc/wifi/WifiConfigStore.xml"
-                "/data/misc/wifi/wpa_supplicant.conf"
-                "/data/misc/apexdata/com.android.wifi/WifiConfigStore.xml"
-                "/data/misc/apexdata/com.android.wifi/WifiConfigStoreStore.xml"
+            # Haetaan salasana eri tiedostoista
+            found_pass=$( \
+                awk -v ssid="\"$ssid_choice\"" '
+                    BEGIN {found=0}
+                    $0 ~ "<string name=\"SSID\">"ssid"<\/string>" {found=1; next}
+                    found && $0 ~ "<string name=\"PreSharedKey\">" {
+                        gsub(/.*<string name="PreSharedKey">|<\/string>.*/, "", $0)
+                        print $0
+                        exit
+                    }
+                    $0 ~ "<string name=\"SSID\">" && found {found=0}
+                ' /data/misc/wifi/WifiConfigStore.xml /data/misc/apexdata/com.android.wifi/WifiConfigStore.xml 2>/dev/null;
+                awk -v ssid="$ssid_choice" '
+                    $0 ~ "network={" {net=1}
+                    net && $0 ~ "ssid=\""ssid"\"" {found=1}
+                    found && $0 ~ "psk=" {
+                        gsub(/psk=|"| /, "", $0)
+                        print $0
+                        exit
+                    }
+                    $0 ~ "}" && net {net=0; found=0}
+                ' /data/misc/wifi/wpa_supplicant.conf 2>/dev/null \
             )
-
-            for FILE in "${FILES[@]}"; do
-                if [ -f "$FILE" ]; then
-                    if [[ "$FILE" == *.xml ]]; then
-                        pass=$(awk -v ssid="\"$ssid_choice\"" '
-                            BEGIN {found=0}
-                            $0 ~ "<string name=\"SSID\">"ssid"<\/string>" {found=1; next}
-                            found && $0 ~ "<string name=\"PreSharedKey\">" {
-                                gsub(/.*<string name="PreSharedKey">|<\/string>.*/, "", $0)
-                                print $0
-                                exit
-                            }
-                            $0 ~ "<string name=\"SSID\">" && found {found=0}
-                        ' "$FILE")
-                    else
-                        pass=$(awk -v ssid="$ssid_choice" '
-                            $0 ~ "network={" {net=1}
-                            net && $0 ~ "ssid=\""ssid"\"" {found=1}
-                            found && $0 ~ "psk=" {
-                                gsub(/psk=|"| /, "", $0)
-                                print $0
-                                exit
-                            }
-                            $0 ~ "}" && net {net=0; found=0}
-                        ' "$FILE")
-                    fi
-
-                    if [ -n "$pass" ]; then
-                        found_pass="$pass"
-                        break
-                    fi
-                fi
-            done
 
             if [ -n "$found_pass" ]; then
                 echo "✅ Password for \"$ssid_choice\": $found_pass"
             else
-                echo "❌ Password not found in phone files, trying aircrack-ng..."
-                if ! command -v aircrack-ng >/dev/null 2>&1; then
-                    echo "📥 aircrack-ng not found, installing..."
-                    pkg update && pkg install aircrack-ng -y
-                fi
-                read -p "📂 Enter path to .cap handshake file: " cap_file
-                if [ ! -f "$cap_file" ]; then
-                    echo "❌ File not found: $cap_file"
-                    continue
-                fi
-                read -p "📂 Enter path to wordlist: " wordlist
-                if [ ! -f "$wordlist" ]; then
-                    echo "❌ File not found: $wordlist"
-                    continue
-                fi
-                aircrack-ng -w "$wordlist" -e "$ssid_choice" "$cap_file"
+                echo "❌ Password not found."
             fi
             ;;
         2)
