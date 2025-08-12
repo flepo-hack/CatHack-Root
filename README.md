@@ -1,6 +1,7 @@
 # CatHack-Root
 Yes CatHack is for you hackers👨‍💻
 
+_____________________________________________________
 
 To use paste this into termux
 
@@ -15,3 +16,9 @@ ls
 cd CatHack-Root 
 ./rootcat.sh
 
+_____________________________________________________
+
+
+What CatHack is CatHack is wifi cracker and ip inf finder. CatHack is used to HACK!
+
+I AM NOT RESPONSIBLE FOR WRONG USE!
