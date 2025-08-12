@@ -9,6 +9,7 @@ pkg install && upgrade -y
 pkg install git
 pkg install curl -y
 pkg install net-tools
+pkg install wget
 
 _____________________________________________________
 
@@ -24,11 +25,21 @@ cd CatHack-Root
 
 _____________________________________________________
 
-chmod +x rootcat.sh
+
+chmod +x sch.sh
+
 
 _____________________________________________________
 
-./rootcat.sh
+
+chmod +x rockyou.txt
+
+
+_____________________________________________________
+
+
+./sch.sh
+
 
 _____________________________________________________
 
