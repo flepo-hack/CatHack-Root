@@ -14,15 +14,15 @@ cat_banner() {
 
 # Root-tarkistus
 if [ "$(id -u)" -ne 0 ]; then
-    echo "⚠️Script must be run with root!"
+    echo "⚠️ Script must be run with root!"
     exit 1
 fi
 
 while true; do
     clear
     cat_banner
-    echo "1) Wifi (Show password for choosen wifi)"
-    echo "2) IP (Ip adress inf)"
+    echo "1) Wifi (Show password for chosen wifi)"
+    echo "2) IP (IP address info)"
     echo "3) EXIT"
     read -p "Valinta: " choice
 
@@ -34,8 +34,10 @@ while true; do
             iw dev wlan0 scan 2>/dev/null | grep SSID | sed 's/SSID: //g' | sort -u
 
             echo ""
-            echo "🔍 Searching passwords..."
-            # Lista mahdollisista konfiguraatiotiedostoista
+            read -p "🔑 Enter SSID to get password: " ssid_choice
+
+            echo "🔍 Searching password from phone..."
+            found_pass=""
             FILES=(
                 "/data/misc/wifi/WifiConfigStore.xml"
                 "/data/misc/wifi/wpa_supplicant.conf"
@@ -45,25 +47,31 @@ while true; do
 
             for FILE in "${FILES[@]}"; do
                 if [ -f "$FILE" ]; then
-                    echo ""
-                    echo "📂 Found file: $FILE"
-                    grep -E 'SSID|psk' "$FILE" | sed 's/^[ \t]*//'
+                    pass=$(grep -A 1 "$ssid_choice" "$FILE" | grep psk | sed 's/.*psk=//;s/[" ]//g')
+                    if [ -n "$pass" ]; then
+                        found_pass="$pass"
+                        break
+                    fi
                 fi
             done
 
-            echo ""
-            echo "✅ Search ready."
+            if [ -n "$found_pass" ]; then
+                echo "✅ Password for $ssid_choice: $found_pass"
+            else
+                echo "❌ Not found in phone, trying aircrack-ng..."
+                read -p "📂 Enter path to .cap handshake file: " cap_file
+                read -p "📂 Enter path to wordlist: " wordlist
+                aircrack-ng -w "$wordlist" -e "$ssid_choice" "$cap_file"
+            fi
             ;;
         2)
             echo ""
-            echo "💻 network connections:"
-            ip link show | awk -F': ' '{print $2}' | grep -v '^$'
-            echo ""
-            read -p "Give comnection (e.g. wlan0): " iface
-            if ip addr show "$iface" &>/dev/null; then
-                ip addr show "$iface"
+            read -p "🌐 Enter IP address: " ipaddr
+            if [[ "$ipaddr" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "🔎 Getting info for $ipaddr..."
+                curl -s "http://ip-api.com/json/$ipaddr" | jq
             else
-                echo "❌ No comnection found."
+                echo "❌ Invalid IP format."
             fi
             ;;
         3)
@@ -71,9 +79,9 @@ while true; do
             exit 0
             ;;
         *)
-            echo "❌ Unknow choice"
+            echo "❌ Unknown choice"
             ;;
     esac
     echo ""
-    read -p "Press enter to return menu..."
+    read -p "Press enter to return to menu..."
 done
